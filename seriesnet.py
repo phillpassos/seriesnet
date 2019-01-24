@@ -28,6 +28,7 @@ V1 Data: September 12, 2018
 from __future__ import print_function, division
 import numpy as np
 import pandas as pd
+import math
 import matplotlib.pyplot as plt
 
 from keras.layers import Conv1D, Input, Add, Activation, Dropout
@@ -41,6 +42,8 @@ from keras.initializers import TruncatedNormal
 from keras.layers.advanced_activations import LeakyReLU, ELU
 
 from keras import optimizers
+
+from tqdm import trange
 
 
 def DC_CNN_Block(nb_filter, filter_length, dilation, l2_layer_reg):
@@ -124,7 +127,8 @@ def evaluate_timeseries(timeseries, predict_size):
     X = timeseries[:-1].reshape(1,length,1)
     y = timeseries[1:].reshape(1,length,1)
     
-    model.fit(X, y, epochs=3000)
+    for _ in trange(1, desc='fitting model\t', mininterval=1.0):
+        model.fit(X, y, epochs=3000, verbose=0)
     
     pred_array = np.zeros(predict_size).reshape(1,predict_size,1)
     X_test_initial = timeseries[1:].reshape(1,length,1)
@@ -132,14 +136,19 @@ def evaluate_timeseries(timeseries, predict_size):
     
     #forecast is created by predicting next future value based on previous predictions
     pred_array[:,0,:] = model.predict(X_test_initial)[:,-1:,:]
-    for i in range(predict_size-1):
+    for i in trange(predict_size-1, desc='predicting \t', mininterval=1.0):
         pred_array[:,i+1:,:] = model.predict(np.append(X_test_initial[:,i+1:,:], 
                                pred_array[:,:i+1,:]).reshape(1,length,1))[:,-1:,:]
     
     return pred_array.flatten()
 
+base = np.random.rand(1,200) #np.array([math.sin(i) for i in np.linspace(0, 9, 1000)])
+result = (evaluate_timeseries(base, 500))
 
-
+print(result)
+plt.plot(base, 'b')
+plt.plot([None for _ in range(len(base))] + [x for x in result], 'r')
+plt.show()
     
 
 
